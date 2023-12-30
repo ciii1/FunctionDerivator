@@ -1,0 +1,158 @@
+type Void;
+type Ptr;
+type Int;
+type Char;
+type Bool;
+type Any;
+
+extern getchar():Char;
+extern printf(qword format:Ptr, qword int:Any):Void;
+extern puts(qword msg:Ptr):Void;
+extern scanf(qword format:Ptr, qword input:Ptr):Int;
+extern atoi(qword char:Ptr):Int;
+extern sprintf(qword str:Ptr, qword format:Ptr, qword a:Any, qword b:Any, qword c:Any):Void;
+extern strlen(qword str:Ptr):Int;
+
+func is_char_opr(byte char:Char):Bool {
+    return char == '+' || char == '-' || char == '/' || char=='=';
+}
+
+func is_char_var(byte char:Char):Bool {
+    byte i:Char = 'A';
+    while(i <= 'Z') {
+        if(char == i) {
+            return true;
+        }
+        i += 1;
+    }
+    i = 'a';
+    while(i <= 'z') {
+        if(char == i) {
+            return true;
+        }
+        i += 1;
+    }
+    return false;
+}
+
+func is_char_num(byte char:Char):Bool {
+    byte i:Char = '0';
+    while(i <= '9') {
+        if(char == i) {
+            return true;
+        }
+        i+=1;
+    }
+    return false;
+}
+
+/*
+ * the following functions return the length of input consumed 
+ */
+
+func parse_var(qword input:Ptr, qword output:Ptr):Ptr {
+    qword i:Ptr = 0;
+    while(is_char_var($(byte)(input+i))) {
+        qword j:Char = $(byte)(input+i);
+        ($(byte)(output+i)) = j;
+        i += 1;
+    }
+    ($(byte)(output+i)) = 0;
+    return i;
+}
+
+func parse_num(qword input:Ptr, qword output:Ptr):Ptr {
+    qword i:Ptr = 0;
+    qword c:Char = $(byte)(input+i);
+    while(is_char_num(c)) {
+        qword j:Char = $(byte)(input+i);
+        ($(byte)(output+i)) = j;
+        i += 1;
+    }
+    ($(byte)(output+i)) = 0;
+    return i;
+}
+
+func gen_var(qword input:Ptr):Int {
+    byte[24] var:Char;
+    qword i:Ptr = parse_var(input, @var);
+    byte c:Char = $(byte)(input+i);
+    if(c == '^') {
+        i += 1;
+        qword c2:Char = $(byte)(input+i);
+        if(is_char_num(c2)) {
+            byte[24] exp:Char;
+            i += parse_num(input+i, @exp);
+            input += i;
+            qword n:Int = atoi(@exp);
+            qword nmin:Int = n-1;
+            printf(@"%i\0", $(qword)@n);
+            printf(@"%s\0", @var);
+            printf(@"^%i\0", $(qword)@nmin);
+        }
+    } elif(is_char_num(c)) {
+        byte[24] num:Char;
+        i += parse_num(input+i, @num);
+        printf(@"%s\0", @num);
+    } else {
+        printf(@"1\0", 0);
+    }
+    return $(qword)@i;
+}
+
+func gen_num(qword input:Ptr):Int {
+    byte[24] num:Char;
+    qword i:Ptr = parse_num(input, @num[0]);
+    byte c:Char = $(byte)(input+i);
+    if(is_char_var(c)) {
+        byte[24] var:Char;
+        i += parse_var(input+i, @var[0]);
+        printf(@"%s\0", @num);
+    } else {
+        printf(@"0\0", 0);
+    }
+    return $(qword)@i;
+}
+
+func main():Int {
+    byte[64] input:Char;
+    byte[64] output:Char;
+
+    printf(@"A program written in Asca that finds the derivative of a function. Doesn't support decimals and '()'.\nInput: a function without any whitespace character. \n^ = \"the power of\".\nDon't describe operator for multiplication.\nExample: f(x)=1x+x^2\n>>> \0", 1);    
+
+    qword c:Char;
+    qword c_i:Int = 0;
+    while(!(c == 10) && c_i < 64) {
+        c = getchar();
+        ($(byte)(@input+c_i)) = c;
+        c_i += 1;
+    }
+    ($(byte)(@input+c_i-1)) = 0;
+
+    qword content_i:Int = 0;
+    while(!(($(byte)(@input+content_i)) == '=')) {
+        byte j:Char = $(byte)(@input+content_i);
+        printf(@"%c\0", $(byte)@j);
+        content_i += 1;
+    }
+
+    qword i:Int = content_i;
+    qword j:Int = 0;
+    byte opr:Char;
+    while(!(($(byte)(@input+i)) == 0)) {
+        if(is_char_opr($(byte)(@input+i))) {
+            opr = $(byte)(@input+i);
+            printf(@"%c\0", $(byte)@opr);
+            j += 1;
+            i += 1;
+        }
+        if(is_char_var($(byte)(@input+i))) {
+            i += gen_var(@input+i);
+        } elif(is_char_num($(byte)(@input+i))) {
+            i += gen_num(@input+i);
+        }
+    }
+    printf(@"\n\0", 0);
+    
+    return 0;
+} global main;
